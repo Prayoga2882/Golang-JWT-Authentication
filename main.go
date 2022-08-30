@@ -50,11 +50,11 @@ type Error struct {
 
 //-------------DATABASE FUNCTIONS---------------------
 
-//returns database connection
+// returns database connection
 func GetDatabase() *gorm.DB {
-	databasename := "userdb"
+	databasename := "JWT-Token"
 	database := "postgres"
-	databasepassword := "1312"
+	databasepassword := "postgres"
 	databaseurl := "postgres://postgres:" + databasepassword + "@localhost/" + databasename + "?sslmode=disable"
 
 	connection, err := gorm.Open(database, databaseurl)
@@ -67,18 +67,18 @@ func GetDatabase() *gorm.DB {
 	if err != nil {
 		log.Fatal("Database connected")
 	}
-	fmt.Println("Database connection successful.")
+	// fmt.Println("Database connection successful.")
 	return connection
 }
 
-//create user table in userdb
+// create user table in userdb
 func InitialMigration() {
 	connection := GetDatabase()
 	defer CloseDatabase(connection)
 	connection.AutoMigrate(User{})
 }
 
-//closes database connection
+// closes database connection
 func CloseDatabase(connection *gorm.DB) {
 	sqldb := connection.DB()
 	sqldb.Close()
@@ -86,26 +86,26 @@ func CloseDatabase(connection *gorm.DB) {
 
 //--------------HELPER FUNCTIONS---------------------
 
-//set error message in Error struct
+// set error message in Error struct
 func SetError(err Error, message string) Error {
 	err.IsError = true
 	err.Message = message
 	return err
 }
 
-//take password as input and generate new hash password from it
+// take password as input and generate new hash password from it
 func GeneratehashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
 }
 
-//compare plain password with hash password
+// compare plain password with hash password
 func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
-//Generate JWT token
+// Generate JWT token
 func GenerateJWT(email, role string) (string, error) {
 	var mySigningKey = []byte(secretkey)
 	token := jwt.New(jwt.SigningMethodHS256)
@@ -126,7 +126,7 @@ func GenerateJWT(email, role string) (string, error) {
 
 //---------------------MIDDLEWARE FUNCTION-----------------------
 
-//check whether user is authorized or not
+// check whether user is authorized or not
 func IsAuthorized(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -172,13 +172,13 @@ func IsAuthorized(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-//----------------------ROUTES-------------------------------
-//create a mux router
+// ----------------------ROUTES-------------------------------
+// create a mux router
 func CreateRouter() {
 	router = mux.NewRouter()
 }
 
-//initialize all routes
+// initialize all routes
 func InitializeRoute() {
 	router.HandleFunc("/signup", SignUp).Methods("POST")
 	router.HandleFunc("/signin", SignIn).Methods("POST")
@@ -192,16 +192,17 @@ func InitializeRoute() {
 	})
 }
 
-//start the server
+// start the server
 func ServerStart() {
 	fmt.Println("Server started at http://localhost:8080")
+	fmt.Println("Application is running...")
 	err := http.ListenAndServe(":8080", handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Access-Control-Allow-Origin", "Content-Type", "Authorization"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"}), handlers.AllowedOrigins([]string{"*"}))(router))
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-//----------------------ROUTES HANDLER-----------------------
+// ----------------------ROUTES HANDLER-----------------------
 func SignUp(w http.ResponseWriter, r *http.Request) {
 	connection := GetDatabase()
 	defer CloseDatabase(connection)
@@ -293,10 +294,12 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte("HOME PUBLIC INDEX PAGE"))
 }
 
 func AdminIndex(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	if r.Header.Get("Role") != "admin" {
 		w.Write([]byte("Not authorized."))
 		return
@@ -305,6 +308,7 @@ func AdminIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func UserIndex(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	if r.Header.Get("Role") != "user" {
 		w.Write([]byte("Not Authorized."))
 		return
